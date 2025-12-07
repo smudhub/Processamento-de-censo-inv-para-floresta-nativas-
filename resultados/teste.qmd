@@ -1,0 +1,130 @@
+---
+title: "Dashboard de Inventário Florestal"
+format:
+  dashboard:
+    theme: cosmo
+    toc: true
+    page-layout: full
+    embed-resources: true
+    df-print: paged
+    css: styles.css
+    code-fold: true
+---
+
+## E
+
+Número de indivíduos por família
+
+```{r echo=FALSE}
+#| title: dashboard_individuos.qmd
+#| echo: false 
+# premissas pre estabelecidas (preencher de acordo com o projeto realizado)
+fator <- 0.5 # fator de forma para calcular o volume
+area<- 4000 # area do censo
+conversao <- 10000/area #valor de conversao para estimativa por ha (tamanho da area)
+
+# carregar base de dados (planilha excel)---------------------------------------
+#pacote here controla o caminho do arquivo
+dados_base <- openxlsx::read.xlsx( 
+  here::here (
+    'dados',
+    'Ficha_de_Campo_revisada.xlsx' #nome da planilha que deverá estar na pasta dados
+  )
+)
+
+n_total <- nrow(dados_base) # numero total de individuos
+
+# padronizando nomes de colunas para os utilizados no codigo caso necessario-----
+dados_base<-dados_base |> dplyr::rename(
+  id = 'INDIV',
+  cap = 'CAP(cm)',
+  altura_total = 'HT(m)',
+  altura_comercial = 'HC(cm)',
+  especie = 'ESPÉCIE' ,
+  #fitossanidade = c,
+  familia = 'FAMÍLIA'
+ #parcela = f # caso seja inventário, se for censo excluir essa linha
+)
+View(dados_base)
+
+# calcular e criar colunas de volume e area transversal ------------------------
+dados_dendrometricos<-dados_base |> dplyr:: mutate(
+  dap = cap/pi, #diametro a altura de peito
+  g_m2 = (dap^2 * pi)/40000, #area transversal
+  v_comercial_m3 = g_m2 * altura_comercial * fator, # volume individual
+  v_total_m3 = g_m2 * altura_total * fator #volume individual
+  
+)
+
+# tirar repeticoes de individuos bifurcados--------------------------------------
+
+dados_dendrometricos<-dados_dendrometricos|>
+  dplyr::group_by(id)|>
+  dplyr::summarise(
+    familia=dplyr::first(familia),
+    especie=dplyr::first(especie),
+    bifurcacoes = dplyr::n(),
+    dap = mean(dap),
+    g_m2 = sum(g_m2),
+    vi_total = sum(v_total_m3),
+    vi_comercial = sum(  v_comercial_m3),
+    altura_comercial=mean(altura_comercial),
+    altura_total= mean(altura_total)
+  )
+
+dados_dendrometricos<-dados_dendrometricos|>
+  dplyr::mutate(
+    dplyr::across(
+      .cols= -c (familia,especie),
+      .fns = ~round(.x,2)
+    )
+  )
+
+# tirar individuos mortos-------------------------------------------------------
+dados_dendrometricos<- dados_dendrometricos |>
+  dplyr::filter(familia != "Morta")
+View(dados_dendrometricos)    
+# agrupar por especie e familia ------------------------------------------------
+
+dados_especie<- dados_dendrometricos|>dplyr::group_by(
+     familia,especie
+) |>dplyr::summarise(
+     
+      n = dplyr::n(), # número de indivíduos 
+      G = sum(g_m2, na.rm = TRUE), # área basal total
+      V = sum( vi_total, na.rm = TRUE), # volume total
+        v_comercial = sum(vi_comercial, na.rm = TRUE), # volume comercial
+      .groups = "drop"
+)
+
+View(dados_especie)
+
+#agrupar por família------------------------------------------------------------
+dados_familia <- dados_dendrometricos|>
+  dplyr::group_by(familia)|>
+  dplyr::summarise(
+  n = dplyr::n(), # número de indivíduos 
+  G = sum(g_m2, na.rm = TRUE), # área basal total
+  V = sum( vi_total, na.rm = TRUE), # volume total
+  v_comercial = sum(vi_comercial, na.rm = TRUE), # volume comercial
+  .groups = "drop"
+  )
+# grafico n por familia----------------------------------------------------------
+
+library(ggplot2)
+ggplot(dados_familia, aes(x = reorder(familia, -n), y = n)) +
+  geom_bar(stat = "identity", fill = "#7EAD40") +  
+  geom_text(aes(label = n), y = -1, size = 2.8) +  
+  labs(
+    title = "Distribuição por família",
+    x = "Família",
+    y = "Número de indivíduos"
+  ) +
+ theme_minimal(base_size = 11) +
+  theme(
+    axis.text.x = element_text(angle = 40, hjust = 1),
+    plot.title = element_text(face = "bold", hjust = 0.5)
+  )
+
+
+```

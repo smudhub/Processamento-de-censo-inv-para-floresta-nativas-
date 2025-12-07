@@ -1,0 +1,77 @@
+---
+title: "Censo"
+format: html
+editor: visual
+---
+
+## Informações
+
+Tamanho da área mensurada: 4406 m2
+
+Coordenadas: xxx
+```{r grafico_familia}
+openxlsx::openXL(here::here(
+  "resultados",
+  "dados_familia.xlsx"
+))
+```
+##
+---
+title: "Censo"
+format: html
+editor: visual
+---
+
+```{r grafico_familia}
+
+dados_familia |>
+  dplyr::arrange(desc(n)) |>  # ordena do maior para o menor
+  echarts4r::e_charts(familia) |>
+  echarts4r::e_bar(n, name = "Número de indivíduos",) |>
+  echarts4r::e_flip_coords() |>  # deixa as barras horizontais
+  echarts4r::e_color("darkgreen") |>  # cor verde escura
+  echarts4r::e_title(
+    text = "Número de indivíduos por família",
+    left = "center"
+  ) |>
+echarts4r::e_x_axis(name = "") |>
+  echarts4r::e_y_axis(name = "Família", axisLabel = list(interval = 0))|>
+  echarts4r::e_theme("roma") |>  # tema limpo, similar ao theme_minimal()
+  echarts4r::e_tooltip(trigger = "axis") |>
+  echarts4r::e_labels(show = TRUE, position = "right") |>
+  echarts4r::e_grid(top = "10%",left = "15%", right = "7%", bottom = "10%") |>
+  echarts4r::e_legend(
+    bottom = 0,       #  coloca a legenda embaixo
+    left = "center"   #  centraliza horizontalmente
+  )
+```
+
+
+## 
+
+```{r}
+classes |>
+  echarts4r::e_charts(classe) |> 
+  echarts4r::e_bar(n, 
+        name = FALSE,
+        color = "lightgrey") |>
+  echarts4r::e_labels(show = TRUE, position = "top") |>
+  echarts4r::e_line(n,
+         name = "Número de indivíduos",
+         lineStyle = list(color = "grey", width = 2),
+         smooth = TRUE,
+         symbol = "circle",
+         color = "grey",
+         symbolSize = 6,
+         y_index = 1) |> 
+  echarts4r::e_theme("roma") |>
+  echarts4r::e_tooltip(trigger = "axis") |> 
+  echarts4r::e_legend(show = TRUE,
+           bottom = 0) |> 
+  echarts4r::e_title("Distribuição por classe de diâmetro",
+           left = "center"
+          
+         )
+```
+
+The `echo: false` option disables the printing of code (only output is displayed).
