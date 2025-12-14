@@ -3,18 +3,19 @@ library(ggplot2)
 library(echarts4r)
 
 # n de indivíduos por familia---------------------------------------------------
-ggplot(dados_familia, aes(x = n, y = reorder(familia, -n) )) +
-  geom_bar(stat = "identity", fill = "darkgreen") +  # cor verde
-  labs(
-    title = "Distribuição por família",
-    x = "Número de indivíduos",
-    y = "Família"
-  ) +
-  theme_minimal(base_size = 10) +
-  theme(
-    axis.text.x = element_text(angle = 45, hjust = 1),
-    plot.title = element_text(face = "bold", hjust = 0.5)
-  )
+
+# ggplot(dados_familia, aes(x = n, y = reorder(familia, -n) )) +
+#   geom_bar(stat = "identity", fill = "darkgreen") +  # cor verde
+#   labs(
+#     title = "Distribuição por família",
+#     x = "Número de indivíduos",
+#     y = "Família"
+#   ) +
+#   theme_minimal(base_size = 10) +
+#   theme(
+#     axis.text.x = element_text(angle = 45, hjust = 1),
+#     plot.title = element_text(face = "bold", hjust = 0.5)
+#   )
 
 
     dados_familia |>
