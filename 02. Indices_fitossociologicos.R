@@ -30,11 +30,12 @@ dados_base <- dados_base |> dplyr::rename(
 View(dados_base)
 
 # calcular e criar colunas de volume e area transversal ------------------------
-dados_dendrometricos <- dados_base |> dplyr:: mutate(
-  dap = cap/pi, #diametro a altura de peito
-  g_m2 = (dap^2 * pi)/40000, #area transversal
-  v_comercial_m3 = g_m2 * altura_comercial * fator, # volume individual
-  v_total_m3 = g_m2 * altura_total * fator #volume individual
+dados_dendrometricos <- dados_base |>
+  dplyr:: mutate(
+    dap = cap/pi, #diametro a altura de peito
+    g_m2 = (dap^2 * pi)/40000, #area transversal
+    v_comercial_m3 = g_m2 * altura_comercial * fator, # volume individual
+    v_total_m3 = g_m2 * altura_total * fator #volume individual
   
 )
 
@@ -71,21 +72,21 @@ dados_dendrometricos <- dados_dendrometricos |>
 dados_especie <- dados_dendrometricos |> dplyr::group_by(
      familia,especie
 ) |> dplyr::summarise(
-     
-      n = dplyr::n(), # número de indivíduos 
-      area_basal = sum(g_m2, na.rm = TRUE), # área basal total
-      v_total = sum( vi_total, na.rm = TRUE), # volume total
-        v_comercial = sum(vi_comercial, na.rm = TRUE), # volume comercial
-      n_ha = n * conversao,
-      gi_ha = area_basal * conversao,
-      VT_ha = v_total * conversao,
-      VC_ha = v_comercial * conversao,
-      .groups = "drop"
-)|> dplyr::mutate(
-  dplyr::across(
-    dplyr::where(is.numeric), ~ round(.x, 2)))
+  n = dplyr::n(), # número de indivíduos
+  area_basal = sum(g_m2, na.rm = TRUE), # área basal total
+  v_total = sum( vi_total, na.rm = TRUE), # volume total
+  v_comercial = sum(vi_comercial, na.rm = TRUE), # volume comercial
+  n_ha = n * conversao,
+  gi_ha = area_basal * conversao,
+  VT_ha = v_total * conversao,
+  VC_ha = v_comercial * conversao,
+  .groups = "drop"
+)|> 
+  dplyr::mutate(
+    dplyr::across(
+      dplyr::where(is.numeric), ~ round(.x, 2)))
 
-#agrupar por família------------------------------------------------------------
+# agrupar por família------------------------------------------------------------
 dados_familia <- dados_dendrometricos |>
    dplyr::group_by(
   familia

@@ -4,13 +4,14 @@
 # premissas pre estabelecidas (preencher de acordo com o projeto realizado)
 fator <- 0.5 # fator de forma para calcular o volume
 area_parcela <- 400 # area da parcela 
-conversao <- 10000/area #valor de conversao para estimativa por ha (tamanho da parcela ou da area)
-t <- 1.96 # valor ta tabela t para 95% , bicaudal
-n_parcela <- 4 # numero de parcelas instaladas no inventario para calcular o desvio
+n_parcela <- 8
 area <- n_parcela * area_parcela
+conversao <- 10000/area_parcela #valor de conversao para estimativa por ha (tamanho da parcela ou da area)
+t <- 1.96 # valor ta tabela t para 95% , bicaudal
+
 # ler arquivo --------------------------------------------------------------------
 
-dados_base_inv <- openxlsx::read.xlsx( "dados/Inventário_Petrúcio_DadosdeCampo_rev.xlsx")
+dados_base_inv <- openxlsx::read.xlsx( "dados/petrucio.xlsx")
 
 # limpar nomes das colunas 
 
@@ -26,7 +27,9 @@ dados_base_inv <- dados_base_inv |>
   parcela = 'n_parcela',
   plaqueta = 'no_plaqueta'
 )
-dados_base_inv$altura_comercial <- as.numeric(as.character(dados_base_inv$altura_comercial))
+
+dados_base_inv$altura_comercial <- as.numeric(
+  as.character(dados_base_inv$altura_comercial))
 
 # calcular e criar colunas de volume e area transversal ------------------------
 
@@ -98,7 +101,7 @@ volume_parcela_ha <- dados_volume_inv|>
   dplyr::group_by(
     parcela)|>
   dplyr::summarise(
-    v_total = sum(v_total) * conversao,
+    v_total = sum(v_total, na.rm = TRUE) * conversao,
     v_comercial = sum(v_comercial, na.rm = TRUE) * conversao,
     altura_total = mean(altura_total),
     altura_comercial = mean(altura_comercial,na.rm = TRUE),
@@ -152,10 +155,19 @@ resumo_IC <- tidyr::tibble( # criar uma tabela com os limites inferior e superio
   )
 
 # agrupar e calcular dados por classes------------------------------------------
+dados_volume_inv <- dados_volume_inv |>
+  dplyr::mutate(
+    v_comercial = dplyr::if_else(
+      is.na(v_comercial), 0,
+      v_comercial
+    ))|>
+  dplyr::mutate(
+    altura_comercial = dplyr::if_else(
+      is.na(altura_comercial), 0,
+      altura_comercial
+    ))
+
 classes_inv <- dados_volume_inv |> 
-  dplyr::filter(
-    !is.na(altura_comercial)
-    ) |> 
   dplyr::mutate(
     volume_lenha = dplyr::if_else(
       dap <= 20, 
@@ -176,12 +188,14 @@ classes_inv <- dados_volume_inv |>
     )
   )|>
   dplyr::group_by(
-    classe
+    parcela, classe
   )|>
   dplyr::summarise(
-    n = dplyr::n()/4,
-    volume_lenha = sum(volume_lenha)/n_parcela,
-    volume_torete = sum(volume_torete)/n_parcela,
+    n = dplyr::n(),
+    especies = dplyr::n_distinct(especie),
+    volume_lenha = sum(volume_lenha),
+    volume_torete = sum(volume_torete),
+    .groups = "drop"
   )|>
   dplyr::arrange(
     classe
@@ -192,29 +206,38 @@ classes_inv <- dados_volume_inv |>
     n_ha = n*conversao,
     n_rel = n/sum(n)*100
   )|>
-  dplyr::mutate(
-    dplyr::across(
-      c(
-        volume_lenha_ha,
-        volume_torete_ha,
-        volume_lenha,
-        volume_torete,
-        n_rel
-      ),~round(.x,2)
-    )
-  )|>
-  dplyr::mutate(
-    dplyr::across(
-      c(n_ha,n),~round(.x,0)
-    )
-  )|>
   dplyr::relocate(
     classe, 1, 
     n, 2,
     n_ha, 3,
     volume_lenha, 4,
     volume_lenha_ha, 5
-    
+    )|> 
+  dplyr::group_by(classe)|>
+  dplyr::summarise(
+    n = mean(n),
+    n_ha = mean(n_ha),
+    especies = mean (especies),
+    volume_lenha = mean(volume_lenha),
+    volume_lenha_ha = mean(volume_lenha_ha),
+    volume_torete = mean(volume_torete),
+    volume_torete_ha = mean(volume_torete_ha),
+    .groups = "drop"
+  )|>
+  dplyr::mutate(
+    dplyr::across(
+      c(
+        volume_lenha_ha,
+        volume_torete_ha,
+        volume_lenha,
+        volume_torete
+      ),~round(.x,2)
+    )
+  )|>
+  dplyr::mutate(
+    dplyr::across(
+      c(n_ha,n,especies),~round(.x,0)
+    )
   )
 
 classes_v <- classes_inv |>
@@ -225,59 +248,72 @@ classes_v <- classes_inv |>
 
 # adicionar linha de total na tabela de classes 
 
-classes_total <- classes_v |>
-  dplyr::bind_rows(
-    dplyr::summarise(
-      classes,
-      classe = "Total",
-      n = sum(n, na.rm = TRUE),
-      n_ha = sum(n_ha, na.rm = TRUE),
-      volume_lenha = sum(volume_lenha,na.rm = TRUE),
-      volume_lenha_ha = sum(volume_lenha_ha,na.rm = TRUE),
-      volume_torete = sum( volume_torete,na.rm = TRUE),
-      volume_torete_ha = sum( volume_torete_ha,na.rm = TRUE)
+# classes_total <- classes_v |>
+#   dplyr::bind_rows(
+#     dplyr::summarise(
+#       classe,
+#       classe = "Total",
+#       n = sum(n, na.rm = TRUE),
+#       n_ha = sum(n_ha, na.rm = TRUE),
+#       volume_lenha = sum(volume_lenha,na.rm = TRUE),
+#       volume_lenha_ha = sum(volume_lenha_ha,na.rm = TRUE),
+#       volume_torete = sum( volume_torete,na.rm = TRUE),
+#       volume_torete_ha = sum( volume_torete_ha,na.rm = TRUE)
       # n_rel = sum(n_rel, na.rm = TRUE),
       # volume_total = sum(volume_total,na.rm = TRUE),
       # volume_relativo = sum(volume_relativo,na.rm = TRUE)
-    )
-  )
+  #   )
+  # )
 
 
 # estrutura vertical------------------------------------------------------------
 
-estrutura_vertical <- dados_volume_inv |>
+estrutura_vertical_inv <- dados_volume_inv |>
   dplyr::mutate(
     estrato = dplyr::case_when(
       altura_total <= 13.0 ~ "Inferior",
       altura_total >= 13.1 & altura_total <= 17.0 ~ "Médio",
-      altura_total >= 17.1 ~ "Superior"
-    )
-  ) |>
-  dplyr::group_by(estrato) |>
+      altura_total >= 17.1 ~ "Superior")
+    ) |>
+  dplyr::group_by(parcela, estrato) |>
   dplyr::summarise(
     altura_min = min(altura_total),
     altura_max = max(altura_total),
     individuos = dplyr::n(),
-    especies = dplyr::n_distinct(especie)
-  ) |>
-  dplyr::mutate(
-    perc_individuos = round(
-      (individuos / sum(individuos)) * 100, 1),
-    perc_especies = round((especies / sum(especies)) * 100, 1)
+    especies = dplyr::n_distinct(especie),
+  .groups = "drop"
   )
-estrutura_vertical <- estrutura_vertical|> 
+
+estrutura_vertical_inv <- estrutura_vertical_inv|> 
+  dplyr::group_by(estrato) |>
+  dplyr::summarise(
+    altura_min = min(altura_min),
+    altura_max = max(altura_max),
+    individuos = mean(individuos),
+    especies = mean(especies),
+    ) |> 
   dplyr::mutate(
     intervalo = dplyr::case_when(
       estrato == "Inferior" ~ "0.0 - 12.9",
       estrato == "Médio" ~ "13 - 16.9",
       estrato == "Superior" ~ ">= 17",
-      TRUE ~ NA_character_
+      TRUE ~ NA_character_)
+    ) |>
+  dplyr::mutate(
+    perc_individuos = round(
+      (individuos / sum(individuos)) * 100, 1),
+    perc_especies = round((especies / sum(especies)) * 100, 1)
+  ) |> 
+  dplyr::relocate(intervalo, .after = 1) |> 
+  dplyr::mutate(
+    dplyr::across(
+      c(individuos, especies,), ~round(.x,0)
     )
-  )|> dplyr::relocate(intervalo, .after = 1)
+  )
 
 # Exportar os arquivos Excel-------------------------------------
-openxlsx::write.xlsx(dados_volume, file = here::here("resultados","dados_volume.xlsx"))
-openxlsx::write.xlsx(dados_parcela, file = here::here("analise","dados_parcela.xlsx"))
+openxlsx::write.xlsx(dados_volume_inv, file = here::here("resultados","dados_volume_inv.xlsx"))
+openxlsx::write.xlsx(volume_parcela_ha, file = here::here("resultados","dados_parcela.xlsx"))
 openxlsx::write.xlsx(resumo_IC, file = here::here("resultados","resumo_IC.xlsx"))
-openxlsx::write.xlsx(resumo_ha, file = here::here("resultados","resumo_ha.xlsx"))
-openxlsx::write.xlsx(resumo_ha, file = here::here("resultados","resumo_total.xlsx"))
+openxlsx::write.xlsx(classes_inv, file = here::here("resultados","classes_inv.xlsx"))
+openxlsx::write.xlsx(estrutura_vertical_inv, file = here::here("resultados","estrutura_vertical_inv.xlsx"))
