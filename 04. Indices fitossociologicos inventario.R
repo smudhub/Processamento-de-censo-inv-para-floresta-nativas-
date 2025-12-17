@@ -112,7 +112,7 @@ base_fito_familia_ha <- base_fitossociologico |>
     g,
     v_total,
     v_comercial
-  )
+  )|>
   dplyr::group_by(familia) |> 
   dplyr::summarise(
     familia = dplyr::first(familia),
