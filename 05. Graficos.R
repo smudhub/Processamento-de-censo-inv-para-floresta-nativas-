@@ -18,7 +18,7 @@ library(echarts4r)
 #   )
 
 
-    dados_familia |>
+dados_familia |>
   dplyr::arrange(desc(n)) |>  # ordena do maior para o menor
   e_charts(familia) |>
   e_bar(n, name = "Número de indivíduos",) |>
@@ -28,7 +28,7 @@ library(echarts4r)
     text = "Número de indivíduos por família",
     left = "center"
   ) |>
-e_x_axis(name = "") |>
+  e_x_axis(name = "") |>
   e_y_axis(name = "Família", axisLabel = list(interval = 0))|>
   e_theme("roma") |>  # tema limpo, similar ao theme_minimal()
   e_tooltip(trigger = "axis") |>
@@ -52,13 +52,13 @@ classe_v |>
         y_index = 0) |>
   e_labels(show = TRUE, position = "top") |>
   e_line ( volume_total,
-         name = "Volume m3",
-         lineStyle = list(color = "darkgreen", width = 2),
-         smooth = TRUE,
-         symbol = "circle",
-         color = "darkgreen",
-         symbolSize = 5,
-         y_index = 0) |> 
+           name = "Volume m3",
+           lineStyle = list(color = "darkgreen", width = 2),
+           smooth = TRUE,
+           symbol = "circle",
+           color = "darkgreen",
+           symbolSize = 5,
+           y_index = 0) |> 
   e_labels(show = TRUE,
            fontSize = 12) |>
   e_theme("roma") |>
@@ -66,4 +66,4 @@ classe_v |>
   e_legend(show = TRUE,
            bottom = 1) |> 
   e_title("Distribuição por classe de diâmetro",
-           left = "center")
+          left = "center")
